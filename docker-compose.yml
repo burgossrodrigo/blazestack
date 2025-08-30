@@ -1,0 +1,32 @@
+services:
+    api:
+        build:
+            context: . # repo root
+            dockerfile: api/Dockerfile
+        ports:
+            - "3030:3030"
+        environment:
+            REDIS_URL: redis://default:${REDIS_PASSWORD}@redis:6379
+        depends_on:
+            redis:
+                condition: service_healthy
+
+    redis:
+        image: redis:7-alpine
+        command: >
+            sh -c "redis-server --appendonly yes --requirepass $$REDIS_PASSWORD"
+        environment:
+            REDIS_PASSWORD: ${REDIS_PASSWORD:-changeme}
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis-data:/data
+        healthcheck:
+            test:
+                ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
+            interval: 5s
+            timeout: 3s
+            retries: 20
+
+volumes:
+    redis-data:
